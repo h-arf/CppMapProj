@@ -1,6 +1,8 @@
 #include "route_planner.h"
 #include <algorithm>
-#define cmpnodes(a,b) ((a->x==b->x)&&(a->y)==(b->y))
+inline bool cmpnodes(RouteModel::Node *a,RouteModel::Node *b){
+    return ((a->x==b->x)&&(a->y)==(b->y));
+}
 RoutePlanner::RoutePlanner(RouteModel &model, float start_x, float start_y, float end_x, float end_y): m_Model(model) {
     // Convert inputs to percentage:
     start_x *= 0.01;
@@ -79,13 +81,14 @@ std::vector<RouteModel::Node> RoutePlanner::ConstructFinalPath(RouteModel::Node 
         if (cur==nullptr){
             throw std::exception();
         }
-        path_found.emplace_back(cur);
-        if (cur->parent!=nullptr){
-            distance+=cur->distance(*cur->parent);
-            cur=cur->parent;
-        }
+        path_found.emplace_back(*cur);
         if (cmpnodes(cur,start_node)){
             break;
+        }
+        if (cur->parent!=nullptr){
+            distance+=cur->distance(*cur->parent);
+            //std::cerr<<cur->distance(*cur->parent)*m_Model.MetricScale()<<std::endl;
+            cur=cur->parent;
         }
     }
     std::reverse(path_found.begin(),path_found.end());
@@ -104,7 +107,7 @@ std::vector<RouteModel::Node> RoutePlanner::ConstructFinalPath(RouteModel::Node 
 
 void RoutePlanner::AStarSearch() {
     RouteModel::Node *cur = start_node;
-
+    cur->visited=true;
     // TODO: Implement your solution here.
     AddNeighbors(cur);
     while (open_list.size()>0){
@@ -114,5 +117,9 @@ void RoutePlanner::AStarSearch() {
             break;
         }
         AddNeighbors(cur);
+    }
+    float dist=0;
+    for (int i=1;i<m_Model.path.size();i++){
+        dist+=m_Model.path[i].distance(m_Model.path[i-1]);
     }
 }
