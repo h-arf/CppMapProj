@@ -1,6 +1,6 @@
 #include "route_planner.h"
 #include <algorithm>
-
+#define cmpnodes(a,b) ((a->x==b->x)&&(a->y)==(b->y))
 RoutePlanner::RoutePlanner(RouteModel &model, float start_x, float start_y, float end_x, float end_y): m_Model(model) {
     // Convert inputs to percentage:
     start_x *= 0.01;
@@ -55,7 +55,9 @@ bool gN(RouteModel::Node*a,RouteModel::Node*b){
 }
 RouteModel::Node *RoutePlanner::NextNode() {
 	std::sort(open_list.begin(),open_list.end(),gN);
-  	
+  	auto ret=open_list[open_list.size()-1];
+    open_list.pop_back();
+    return ret;
 }
 
 
@@ -71,9 +73,22 @@ std::vector<RouteModel::Node> RoutePlanner::ConstructFinalPath(RouteModel::Node 
     // Create path_found vector
     distance = 0.0f;
     std::vector<RouteModel::Node> path_found;
-
+    RouteModel::Node*cur=current_node;
     // TODO: Implement your solution here.
-
+    while (true){//so even start_node is added
+        if (cur==nullptr){
+            throw std::exception();
+        }
+        path_found.emplace_back(cur);
+        if (cur->parent!=nullptr){
+            distance+=cur->distance(*cur->parent);
+            cur=cur->parent;
+        }
+        if (cmpnodes(cur,start_node)){
+            break;
+        }
+    }
+    std::reverse(path_found.begin(),path_found.end());
     distance *= m_Model.MetricScale(); // Multiply the distance by the scale of the map to get meters.
     return path_found;
 
@@ -88,8 +103,16 @@ std::vector<RouteModel::Node> RoutePlanner::ConstructFinalPath(RouteModel::Node 
 // - Store the final path in the m_Model.path attribute before the method exits. This path will then be displayed on the map tile.
 
 void RoutePlanner::AStarSearch() {
-    RouteModel::Node *current_node = nullptr;
+    RouteModel::Node *cur = start_node;
 
     // TODO: Implement your solution here.
-
+    AddNeighbors(cur);
+    while (open_list.size()>0){
+        cur=NextNode();
+        if (cmpnodes(cur,end_node)){
+            m_Model.path=ConstructFinalPath(cur);
+            break;
+        }
+        AddNeighbors(cur);
+    }
 }
